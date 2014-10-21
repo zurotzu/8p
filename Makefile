@@ -37,4 +37,4 @@ uninstall:
 	@echo removing executables from ${DESTDIR}${PREFIX}/bin
 	@rm -f ${DESTDIR}${PREFIX}/bin/8p
 
-.PHONY: all clean install uninstall
+.PHONY: all clean dist install uninstall
