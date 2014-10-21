@@ -1,6 +1,8 @@
-8p
---
+# 8p
 
-A simple command-line player for 8tracks.com.
+A ncurses-based command-line player for 8tracks.com.
 
+
+## Dependencies
+curl, jansson, libbsd, ncurses(w), vlc, utf8 locale
 
