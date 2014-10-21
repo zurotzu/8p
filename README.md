@@ -1,6 +1,6 @@
 # 8p
 
-A ncurses-based command-line player for 8tracks.com.
+An ncurses-based command-line player for 8tracks.com.
 
 
 ## Dependencies
