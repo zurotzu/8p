@@ -262,7 +262,8 @@ drawfooter(void)
 		(void) mvwprintw(screen.footer, 0, 0, "%s", search);
 		listprint();
 		(void) curs_set(1);
-		(void) wmove(screen.footer, 0, strlen(search)+screen.pos);
+		(void) wmove(screen.footer, 0,
+		    ((int) strlen(search))+screen.pos);
 		break;
 	case SELECT:
 		(void) mvwprintw(screen.footer, 0, 0, "%s", select);
