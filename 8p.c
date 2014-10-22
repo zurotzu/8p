@@ -759,7 +759,8 @@ playnextmix(void)
 	}
 	play.mix_id = json_integer_value(id);
 	name = json_object_get(next_mix, "name");
-	snprintf(play.mix_name, sizeof(play.mix_name), json_string_value(name));
+	(void) snprintf(play.mix_name, sizeof(play.mix_name), "%s",
+	    json_string_value(name));
 	json_decref(selection.root);
 
 	drawplaylist();
@@ -786,7 +787,8 @@ playselect(void)
 	    mod(selection.pos, json_array_size(mixes)));
 	name = json_object_get(data, "name");
 	id = json_object_get(data, "id");
-	snprintf(play.mix_name, sizeof(play.mix_name), json_string_value(name));
+	(void) snprintf(play.mix_name, sizeof(play.mix_name), "%s",
+	    json_string_value(name));
 	play.mix_id = json_integer_value(id);
 	json_decref(selection.root);
 	    
