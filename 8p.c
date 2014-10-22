@@ -145,7 +145,7 @@ curlwrite(void *contents, size_t size, size_t nmemb, void *stream)
 		err(1, NULL);
 	memcpy(&(buf->data[buf->size]), contents, total);
 	buf->size += total;
-	buf->data[buf->size] = 0;
+	buf->data[buf->size] = '\0';
 
 	return total;
 }
