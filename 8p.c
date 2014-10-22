@@ -175,8 +175,8 @@ static void
 drawplaylist(void)
 {
 	(void) wclear(screen.body);
-	mvwprintw(screen.body, 0, 0, "Playlist");
-	mvwprintw(screen.body, 1, 0, "--------");
+	(void) mvwprintw(screen.body, 0, 0, "Playlist");
+	(void) mvwprintw(screen.body, 1, 0, "--------");
 	screen.y = 3;
 	drawbody();
 }
@@ -184,7 +184,7 @@ drawplaylist(void)
 static void
 updateplaylist(void)
 {
-	mvwprintw(screen.body, screen.y, 0, "%d. %s\n",
+	(void) mvwprintw(screen.body, screen.y, 0, "%d. %s\n",
 	    play.i, play.track_name);
 	screen.y = getcury(screen.body);
 	drawbody();
