@@ -367,12 +367,12 @@ drawselect(void)
 		(void) wprintw(screen.select, "Number of plays:\n");
 		(void) wattroff(screen.select, A_BOLD);
 		(void) wprintw(screen.select, "%d\n",
-		    json_integer_value(plays));
+		    (int) json_integer_value(plays));
 		(void) wattron(screen.select, A_BOLD);
 		(void) wprintw(screen.select, "Number of likes:\n");
 		(void) wattroff(screen.select, A_BOLD);
 		(void) wprintw(screen.select, "%d\n",
-		    json_integer_value(likes));
+		    (int) json_integer_value(likes));
 		(void) wprintw(screen.select, "\n---\n\n");
 		i++;
 		count++;
@@ -758,7 +758,7 @@ playnextmix(void)
 		drawerror("Could not retrieve the next mix.");
 		return;
 	}
-	play.mix_id = json_integer_value(id);
+	play.mix_id = (int) json_integer_value(id);
 	name = json_object_get(next_mix, "name");
 	(void) snprintf(play.mix_name, sizeof(play.mix_name), "%s",
 	    json_string_value(name));
@@ -790,7 +790,7 @@ playselect(void)
 	id = json_object_get(data, "id");
 	(void) snprintf(play.mix_name, sizeof(play.mix_name), "%s",
 	    json_string_value(name));
-	play.mix_id = json_integer_value(id);
+	play.mix_id = (int) json_integer_value(id);
 	json_decref(selection.root);
 	    
 	state = PLAYING;
@@ -859,7 +859,7 @@ playsong(void)
 		    json_string_value(performer), json_string_value(name));
 	}
 	if (id != NULL)
-		play.track_id = json_integer_value(id);
+		play.track_id = (int) json_integer_value(id);
 	play.reported = false;
 	if (skip_allowed != NULL) {
 		if (json_is_true(skip_allowed))
