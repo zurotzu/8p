@@ -8,7 +8,16 @@ An ncurses-based command-line player for 8tracks.com.
 ## Dependencies
 curl, jansson, libbsd, ncurses(w), vlc, utf8 locale
 
-## Install
+## Installation
+
+To install run (as root)  
+
+`make clean install`
+
+Note: 8p is installed by default into the /usr/local namespace.  
+You can change this by specifying `PREFIX`, e.g.  
+`make PREFIX=/usr install`  
+will install the 8p binary into /usr/bin/8p.
 
 ### Arch Linux
 
@@ -16,5 +25,5 @@ curl, jansson, libbsd, ncurses(w), vlc, utf8 locale
 
 ### Debian/Ubuntu
 
-Change `#include <ncurses.h>` into `#include <ncursesw/curses.h>`
+In 8p.c, change `#include <ncurses.h>` into `#include <ncursesw/curses.h>`.
 
