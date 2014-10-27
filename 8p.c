@@ -37,6 +37,8 @@
 #define BODY_HEIGHT 800
 #define FOOTER_HEIGHT 1
 #define HEADER_HEIGHT 2
+#define FALSE 0
+#define TRUE 1
 
 enum states {START, SEARCH, SELECT, PLAYING};
 
@@ -899,7 +901,7 @@ playsong(void)
 		json_decref(selection.root);
 		return;
 	}
-	play.songended = 0;
+	play.songended = FALSE;
 	play.i++;
 	m = libvlc_media_new_location(vlc_inst,
 	    json_string_value(track_file_stream_url));
@@ -990,7 +992,7 @@ search(void)
 void
 songend(const struct libvlc_event_t *event, void *data)
 {
-	play.songended = 1;
+	play.songended = TRUE;
 }
 
 int
@@ -1015,14 +1017,14 @@ main(void)
 	play.mix_id = 0;
 	play.mix_name[0] = '\0';
 	play.track_name[0] = '\0';
-	play.songended = 0;
+	play.songended = FALSE;
 	playtoken = NULL;
 	quit = false;
 	state = START;
 	while (!quit) {
 		cerr = get_wch(&c);
 
-		if (play.songended == 1 && state == PLAYING) {
+		if (play.songended == TRUE && state == PLAYING) {
 			if (play.last_track)
 				playnextmix();
 			else
