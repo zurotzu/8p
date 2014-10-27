@@ -911,33 +911,45 @@ report(void)
 static void
 search(void)
 {
-	char *js, *url, *tmp;
+	char *js, *tmp, *url;
+	char basic[] = "all"; /* default smart id */
+	char prefix[] = "http://8tracks.com/mix_sets/";
+	char suffix[] = "?include=mixes";
+	int tmp_len;
 	json_error_t error;
-	size_t len, ulen;
+	size_t len;
 	struct node_t *it;
 
 	if (listlength() == 0) {
-		url = malloc(46*sizeof(char));
-		snprintf(url, 46,
-		    "http://8tracks.com/mix_sets/all?include=mixes"); 
-	} else {
-		ulen = (listlength() * MB_CUR_MAX) + 42 + 1;
-		url = malloc(ulen*sizeof(char));
+		len = strlen(prefix) + strlen(basic) + strlen(suffix) + 1;
+		url = malloc(len * sizeof(char));
 		if (url == NULL)
 			err(1, NULL);
-		snprintf(url, ulen, "http://8tracks.com/mix_sets/");
-		tmp = malloc(MB_CUR_MAX*sizeof(char));
+		(void) snprintf(url, len, "%s%s%s", prefix, basic, suffix);
+	} else {
+		len = strlen(prefix) + listlength() * MB_CUR_MAX +
+		    strlen(suffix) + 1;
+		url = malloc(len * sizeof(char));
+		if (url == NULL)
+			err(1, NULL);
+		(void) snprintf(url, len, "%s", prefix);
+
+		tmp = malloc(MB_CUR_MAX * sizeof(char));
+		if (tmp == NULL)
+			err(1, NULL);
 		it = head;
 		while (it != NULL) {
-			len = wctomb(tmp, it->c);
-			tmp[len] = '\0';
-			strlcat(url, tmp, ulen);
+			tmp_len = wctomb(tmp, it->c);
+			tmp[tmp_len] = '\0';
+			(void) strlcat(url, tmp, len);
 			it = it->next;
 		}
-		strlcat(url, "?include=mixes", ulen);
 		free(tmp);
+
+		(void) strlcat(url, suffix, len);
+
+		listclean();
 	}
-	listclean();
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
