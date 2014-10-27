@@ -907,8 +907,7 @@ playsong(void)
 static void
 report(void)
 {
-	char *url;
-	char *js;
+	char *js, *url;
 	char base[] = "http://8tracks.com/sets//report?track_id=&mix_id=";
 	size_t len;
 
