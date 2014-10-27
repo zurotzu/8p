@@ -65,12 +65,12 @@ struct select_t {
 struct play_t {
 	bool	 last_track;
 	bool	 skip_allowed;
-	bool	 songended;
 	char	 mix_name[100];
 	char	 track_name[100];
 	int	 i;
 	int	 mix_id;
 	int	 reported;
+	int	 songended;
 	int	 track_id;
 };
 
@@ -894,7 +894,7 @@ playsong(void)
 		json_decref(selection.root);
 		return;
 	}
-	play.songended = false;
+	play.songended = 0;
 	play.i++;
 	m = libvlc_media_new_location(vlc_inst,
 	    json_string_value(track_file_stream_url));
@@ -985,7 +985,7 @@ search(void)
 void
 songend(const struct libvlc_event_t *event, void *data)
 {
-	play.songended = true;
+	play.songended = 1;
 }
 
 int
@@ -1010,14 +1010,14 @@ main(void)
 	play.mix_id = 0;
 	play.mix_name[0] = '\0';
 	play.track_name[0] = '\0';
-	play.songended = false;
+	play.songended = 0;
 	playtoken = NULL;
 	quit = false;
 	state = START;
 	while (!quit) {
 		cerr = get_wch(&c);
 
-		if (play.songended && state == PLAYING) {
+		if (play.songended == 1 && state == PLAYING) {
 			if (play.last_track)
 				playnextmix();
 			else
