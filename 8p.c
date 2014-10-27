@@ -65,13 +65,13 @@ struct select_t {
 struct play_t {
 	bool	 last_track;
 	bool	 skip_allowed;
-	bool	 reported;
 	bool	 songended;
 	char	 mix_name[100];
 	char	 track_name[100];
-	int	 mix_id;
-	int	 track_id;
 	int	 i;
+	int	 mix_id;
+	int	 reported;
+	int	 track_id;
 };
 
 static	void	 checklocale(void);
@@ -93,6 +93,7 @@ static	void	 handlesearchkey(wint_t);
 static	void	 handlesearchpos(wint_t);
 static	void	 initncurses(void);
 static	void	 initsearch(void);
+static	size_t	 intlen(int);
 static	void	 listclean(void);
 static	int	 listlength(void);
 static	void	 listpop(void);
@@ -481,6 +482,22 @@ initsearch(void)
 	drawfooter();
 }
 
+static size_t
+intlen(int i)
+{
+	size_t len;
+
+	if (i < 0)
+		i *= -1;
+	len = 1;
+	while (i > 9) {
+		len++;
+		i /= 10;
+	}
+
+	return len;
+}
+
 static char *
 fetch(char *url)
 {
@@ -860,7 +877,7 @@ playsong(void)
 	}
 	if (id != NULL)
 		play.track_id = (int) json_integer_value(id);
-	play.reported = false;
+	play.reported = 0;
 	if (skip_allowed != NULL) {
 		if (json_is_true(skip_allowed))
 			play.skip_allowed = true;
@@ -892,11 +909,12 @@ report(void)
 {
 	char *url;
 	char *js;
+	char base[] = "http://8tracks.com/sets//report?track_id=&mix_id=";
 	size_t len;
 
-	len = 55 + strlen(playtoken) + snprintf(NULL, 0, "%d", play.track_id) +
-	    snprintf(NULL, 0, "%d", play.mix_id) + 1;
-	url = malloc(len*sizeof(char));
+	len = strlen(base) + strlen(playtoken) + intlen(play.track_id) +
+	    intlen(play.mix_id) + 1;
+	url = malloc(len * sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
 	snprintf(url, len,
@@ -905,7 +923,7 @@ report(void)
 	js = fetch(url);
 	free(js);
 	free(url);
-	play.reported = true;
+	play.reported = 1;
 }
 
 static void
@@ -1006,7 +1024,7 @@ main(void)
 			else
 				playnext();
 		}
-		if (!play.reported && state == PLAYING) {
+		if (play.reported == 0 && state == PLAYING) {
 			if (libvlc_media_player_get_time(vlc_mp) >= (30 * 1000))
 				report();
 		}
