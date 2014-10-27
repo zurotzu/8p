@@ -908,7 +908,7 @@ static void
 report(void)
 {
 	char *js, *url;
-	char base[] = "http://8tracks.com/sets//report?track_id=&mix_id=";
+	char base[] = "http://8tracks.com/sets/" "/report?track_id=" "&mix_id=";
 	size_t len;
 
 	len = strlen(base) + strlen(playtoken) + intlen(play.track_id) +
