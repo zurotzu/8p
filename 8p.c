@@ -503,8 +503,8 @@ fetch(char *url)
 {
 	CURL *curl;
 	CURLcode curl_err;
-	char *ret;
-	char key[60];
+	char *key, *ret;
+	char prefix_key[] = "X-Api-Key: ";
 	size_t len;
 	struct buf_t buf;
 	struct curl_slist *headers;
@@ -517,7 +517,11 @@ fetch(char *url)
 	if ((buf.data = malloc(1)) == NULL)
 		err(1, NULL);
 	buf.size = 0;
-	(void) snprintf(key, sizeof(key), "X-Api-Key: %s", APIKEY);
+	len = strlen(prefix_key) + strlen(APIKEY) + 1;
+	key = malloc(len * sizeof(char));
+	if (key == NULL)
+		err(1, NULL);
+	(void) snprintf(key, len, "%s%s", prefix_key, APIKEY);
 	headers = curl_slist_append(NULL, key);
 	headers = curl_slist_append(headers, "X-Api-Version: 3");
 	headers = curl_slist_append(headers, "User-Agent: 8p");
@@ -535,7 +539,7 @@ fetch(char *url)
 		ret = malloc(len*sizeof(char));
 		if (ret == NULL)
 			err(1, NULL);
-		strlcpy(ret, buf.data, len);
+		(void) strlcpy(ret, buf.data, len);
 	} else
 		ret = NULL;
 
@@ -543,6 +547,7 @@ fetch(char *url)
 	curl_slist_free_all(headers);
 	curl_global_cleanup();
 	free(buf.data);
+	free(key);
 
 	return ret;
 }
