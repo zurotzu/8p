@@ -64,8 +64,8 @@ struct select_t {
 	int	 pos;
 };
 struct play_t {
-	bool	 last_track;
-	bool	 skip_allowed;
+	int	 last_track;
+	int	 skip_allowed;
 	char	 mix_name[100];
 	char	 track_name[100];
 	int	 i;
@@ -833,11 +833,11 @@ playskip(void)
 
 	if (playtoken == NULL)
 		return;
-	if (!play.skip_allowed) {
+	if (play.skip_allowed == FALSE) {
 		drawerror("Skip not allowed.");
 		return;
 	}
-	if (play.last_track) {
+	if (play.last_track == TRUE) {
 		playnextmix();
 		return;
 	}
@@ -886,15 +886,15 @@ playsong(void)
 	play.reported = 0;
 	if (skip_allowed != NULL) {
 		if (json_is_true(skip_allowed))
-			play.skip_allowed = true;
+			play.skip_allowed = TRUE;
 		else
-			play.skip_allowed = false;
+			play.skip_allowed = FALSE;
 	}
 	if (at_last_track != NULL) {
 		if (json_is_true(at_last_track))
-			play.last_track = true;
+			play.last_track = TRUE;
 		else
-			play.last_track = false;
+			play.last_track = FALSE;
 	}
 	if (track_file_stream_url == NULL) {
 		json_decref(selection.root);
@@ -999,8 +999,7 @@ main(void)
 {
 	libvlc_event_manager_t *vlc_em;
 	libvlc_callback_t callback = songend;
-	bool quit;
-	int cerr;
+	int cerr, quit;
 	wint_t c;
 
 	checklocale();
@@ -1018,13 +1017,13 @@ main(void)
 	play.track_name[0] = '\0';
 	play.songended = FALSE;
 	playtoken = NULL;
-	quit = false;
+	quit = FALSE;
 	state = START;
-	while (!quit) {
+	while (quit == FALSE) {
 		cerr = get_wch(&c);
 
 		if (play.songended == TRUE && state == PLAYING) {
-			if (play.last_track)
+			if (play.last_track == TRUE)
 				playnextmix();
 			else
 				playnext();
@@ -1046,7 +1045,7 @@ main(void)
 			case OK:
 				switch (c) {
 				case 'q':
-					quit = true;
+					quit = TRUE;
 					break;
 				case 's':
 					initsearch();
@@ -1154,7 +1153,7 @@ main(void)
 			case OK:
 				switch (c) {
 				case 'q':
-					quit = true;
+					quit = TRUE;
 					break;
 				case 's':
 					initsearch();
