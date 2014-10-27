@@ -83,6 +83,7 @@ static	void	 drawfooter(void);
 static	void	 drawheader(void);
 static	void	 drawplaylist(void);
 static	void	 drawsearch(void);
+static	void	 drawsearching(void);
 static	void	 drawselect(void);
 static	void	 drawwelcome(void);
 static	void	 exitsearch(void);
@@ -315,6 +316,14 @@ drawsearch(void)
 	(void) wclear(screen.search);
 	for (i = 0; i < sizeof(txt)/sizeof(txt[0]); i++)
 		(void) mvwprintw(screen.search, i, 0, "%s", txt[i]);
+}
+
+static void
+drawsearching(void)
+{
+	(void) wclear(screen.select);
+	(void) mvwprintw(screen.select, 0, 0, "Searching...");
+	drawbody();
 }
 
 static void
@@ -973,6 +982,8 @@ search(void)
 
 		listclean();
 	}
+	state = SELECT;
+	drawsearching();
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
@@ -983,7 +994,6 @@ search(void)
 	selection.root = json_loads(js, 0, &error);
 	free(js);
 	selection.pos = 0;
-	state = SELECT;
 	drawselect();
 	drawfooter();
 }
