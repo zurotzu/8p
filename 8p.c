@@ -46,8 +46,8 @@ struct buf_t {
 	size_t	 size;
 };
 struct node_t {
-	struct node_t *next;
-	wchar_t c;
+	struct node_t	*next;
+	wchar_t		 c;
 };
 struct screen_t {
 	WINDOW	*body;
