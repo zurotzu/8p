@@ -31,11 +31,11 @@
 #include <vlc/vlc.h>
 
 #define APIKEY		"e233c13d38d96e3a3a0474723f6b3fcd21904979"
-#define DELAY		15
-#define ESCDELAY	10
-#define BODY_HEIGHT	800
-#define FOOTER_HEIGHT	1
-#define HEADER_HEIGHT	2
+#define DELAY		15	/* Half-delay time */
+#define ESCDELAY	10	/* ms to wait after reading ESC */
+#define BODY_HEIGHT	800	/* Pad height of body*/
+#define FOOTER_HEIGHT	1	/* Pad height of footer */
+#define HEADER_HEIGHT	2	/* Pad height of header */
 #define FALSE		0
 #define TRUE		1
 
