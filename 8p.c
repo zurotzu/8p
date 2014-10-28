@@ -30,14 +30,14 @@
 #include <ncurses.h>
 #include <vlc/vlc.h>
 
-#define APIKEY "e233c13d38d96e3a3a0474723f6b3fcd21904979"
-#define DELAY 15
-#define ESCDELAY 10
-#define BODY_HEIGHT 800
-#define FOOTER_HEIGHT 1
-#define HEADER_HEIGHT 2
-#define FALSE 0
-#define TRUE 1
+#define APIKEY		"e233c13d38d96e3a3a0474723f6b3fcd21904979"
+#define DELAY		15
+#define ESCDELAY	10
+#define BODY_HEIGHT	800
+#define FOOTER_HEIGHT	1
+#define HEADER_HEIGHT	2
+#define FALSE		0
+#define TRUE		1
 
 enum states {START, SEARCH, SELECT, PLAYING};
 
@@ -112,14 +112,15 @@ static	void	 search(void);
 void		 songend(const struct libvlc_event_t *, void *);
 static	void	 updateplaylist(void);
 
-static char *playtoken;
-static int pstate, state;
-static libvlc_instance_t *vlc_inst;
-static libvlc_media_player_t *vlc_mp;
-static struct node_t *head;
-static struct play_t play;
-static struct screen_t screen;
-static struct select_t selection;
+/* Globals */
+static char			*playtoken;
+static int			 pstate, state;
+static libvlc_instance_t	*vlc_inst;
+static libvlc_media_player_t	*vlc_mp;
+static struct node_t		*head;
+static struct play_t		 play;
+static struct screen_t		 screen;
+static struct select_t		 selection;
 
 static void
 checklocale(void)
@@ -129,9 +130,9 @@ checklocale(void)
 	locale = setlocale(LC_ALL, "");
 	if (locale == NULL || 
 	    (strstr(locale, "UTF-8") == NULL &&
-	    strstr(locale, "utf-8") == NULL &&
-	    strstr(locale, "UTF8") == NULL &&
-	    strstr(locale, "utf8") == NULL))
+	     strstr(locale, "utf-8") == NULL &&
+	     strstr(locale, "UTF8")  == NULL &&
+	     strstr(locale, "utf8")  == NULL))
 		errx(1, "UTF-8 locale expected");
 }
 
