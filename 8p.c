@@ -588,6 +588,8 @@ getplaytoken(void) {
 	}
 	len = strlen(json_string_value(playtoken)) + 1;
 	ret = malloc(len*sizeof(char));
+	if (ret == NULL)
+		err(1, NULL);
 	strlcpy(ret, json_string_value(playtoken), len); 
 	json_decref(root);
 
