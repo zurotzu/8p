@@ -158,8 +158,7 @@ drawbody(void)
 {
 	WINDOW *win;
 
-	switch (state)
-	{
+	switch (state) {
 	case SEARCH:
 		win = screen.search;
 		break;
@@ -702,6 +701,8 @@ static void
 playfirst(void)
 {
 	char *js, *url;
+	char prefix[] = "http://8tracks.com/sets/";
+	char interfix[] = "/play?mix_id=";
 	size_t len;
 	json_error_t error;
 
@@ -713,12 +714,13 @@ playfirst(void)
 		return;
 	}
 
-	len = snprintf(NULL, 0, "%d", play.mix_id) + strlen(playtoken) + 37 + 1;
+	len = strlen(prefix) + strlen(playtoken) + strlen(interfix) +
+	    intlen(play.mix_id) + 1;
 	url = malloc(len*sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
-	snprintf(url, len, "http://8tracks.com/sets/%s/play?mix_id=%d",
-	    playtoken, play.mix_id);
+	(void) snprintf(url, len, "%s%s%s%d", prefix, playtoken, interfix,
+	    play.mix_id);
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
@@ -735,17 +737,20 @@ static void
 playnext(void)
 {
 	char *js, *url;
+	char prefix[] = "http://8tracks.com/sets/";
+	char interfix[] = "/next?mix_id=";
 	size_t len;
 	json_error_t error;
 
 	if (playtoken == NULL)
 		return;
-	len = snprintf(NULL, 0, "%d", play.mix_id) + strlen(playtoken) + 37 + 1;
+	len = strlen(prefix) + strlen(playtoken) + strlen(interfix) +
+	    intlen(play.mix_id) + 1;
 	url = malloc(len*sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
-	snprintf(url, len, "http://8tracks.com/sets/%s/next?mix_id=%d",
-	    playtoken, play.mix_id);
+	(void) snprintf(url, len, "%s%s%s%d", prefix, playtoken, interfix,
+	    play.mix_id);
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
@@ -763,6 +768,9 @@ static void
 playnextmix(void)
 {
 	char *js, *url;
+	char prefix[] = "http://8tracks.com/sets/";
+	char interfixone[] = "/next_mix?mix_id=";
+	char interfixtwo[] = "&smart_id=similar:";
 	size_t len;
 	json_error_t error;
 	json_t *next_mix, *id, *name;
@@ -770,14 +778,13 @@ playnextmix(void)
 	if (playtoken == NULL)
 		return;
 
-	len = snprintf(NULL, 0, "%d", play.mix_id)*2 + strlen(playtoken) +
-	    snprintf(NULL, 0, "http://8tracks.com/sets//next_mix.json?mix_id="
-	    "&smart_id=similar:") + 1;
+	len = strlen(prefix) + strlen(playtoken) + strlen(interfixone) +
+	    intlen(play.mix_id) + strlen(interfixtwo) + intlen(play.mix_id) + 1;
 	url = malloc(len*sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
-	snprintf(url, len, "http://8tracks.com/sets/%s/next_mix.json?mix_id=%d"
-	    "&smart_id=similar:%d", playtoken, play.mix_id, play.mix_id);
+	(void) snprintf(url, len, "%s%s%s%d%s%d", prefix, playtoken,
+	    interfixone, play.mix_id, interfixtwo, play.mix_id);
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
@@ -839,6 +846,8 @@ static void
 playskip(void)
 {
 	char *js, *url;
+	char prefix[] = "http://8tracks.com/sets/";
+	char interfix[] = "/skip?mix_id=";
 	size_t len;
 	json_error_t error;
 
@@ -853,12 +862,13 @@ playskip(void)
 		return;
 	}
 
-	len = snprintf(NULL, 0, "%d", play.mix_id) + strlen(playtoken) + 37 + 1;
+	len = strlen(prefix) + strlen(playtoken) + strlen(interfix) +
+	    intlen(play.mix_id) + 1;
 	url = malloc(len*sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
-	snprintf(url, len, "http://8tracks.com/sets/%s/skip?mix_id=%d",
-	    playtoken, play.mix_id);
+	(void) snprintf(url, len, "%s%s%s%d", prefix, playtoken, interfix,
+	    play.mix_id);
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
@@ -889,7 +899,8 @@ playsong(void)
 	performer = json_object_get(track, "performer");
 	track_file_stream_url = json_object_get(track, "track_file_stream_url");
 	if (name != NULL && performer != NULL) {
-		snprintf(play.track_name, sizeof(play.track_name), "%s - %s",
+		(void) snprintf(play.track_name, sizeof(play.track_name),
+		    "%s - %s",
 		    json_string_value(performer), json_string_value(name));
 	}
 	if (id != NULL)
@@ -925,17 +936,19 @@ static void
 report(void)
 {
 	char *js, *url;
-	char base[] = "http://8tracks.com/sets/" "/report?track_id=" "&mix_id=";
+	char prefix[] = "http://8tracks.com/sets/";
+	char interfixone[] = "/report?track_id=";
+	char interfixtwo[] = "&mix_id=";
 	size_t len;
 
-	len = strlen(base) + strlen(playtoken) + intlen(play.track_id) +
-	    intlen(play.mix_id) + 1;
+	len = strlen(prefix) + strlen(playtoken) + strlen(interfixone) +
+	    intlen(play.track_id) + strlen(interfixtwo) + intlen(play.mix_id) +
+	    1;
 	url = malloc(len * sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
-	snprintf(url, len,
-	    "http://8tracks.com/sets/%s/report?track_id=%d&mix_id=%d",
-	    playtoken, play.track_id, play.mix_id);
+	(void) snprintf(url, len, "%s%s%s%d%s%d", prefix, playtoken,
+	    interfixone, play.track_id, interfixtwo, play.mix_id);
 	js = fetch(url);
 	free(js);
 	free(url);
