@@ -90,7 +90,7 @@ static	void	 exitsearch(void);
 static	void	 exitselect(void);
 static	char	*fetch(char *);
 static	char	*getplaytoken(void);
-static	void	 handlekey(int, wint_t);
+static	int	 handlekey(int, wint_t);
 static	void	 handleresize(void);
 static	void	 handlesearchkey(wint_t);
 static	void	 handlesearchpos(wint_t);
@@ -422,14 +422,16 @@ exitselect(void)
 	drawbody();
 }
 
-static void
+static int
 handlekey(int err, wint_t c)
 {
+	int quit = FALSE;
+	
 	if (err == ERR)
-		return;
+		return quit;
 	if (c == KEY_RESIZE) {
 		handleresize();
-		return;
+		return quit;
 	}
 	switch (state) {
 	case PLAYING:
@@ -561,6 +563,8 @@ handlekey(int err, wint_t c)
 	default:
 		break;
 	}
+
+	return quit;
 }
 
 static void
@@ -1201,7 +1205,7 @@ main(void)
 			if (libvlc_media_player_get_time(vlc_mp) >= (30 * 1000))
 				report();
 		}
-		handlekey(err, c);
+		quit = handlekey(err, c);
 	}
 
 	(void) endwin();
