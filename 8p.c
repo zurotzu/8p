@@ -90,6 +90,7 @@ static	void	 exitsearch(void);
 static	void	 exitselect(void);
 static	char	*fetch(char *);
 static	char	*getplaytoken(void);
+static	void	 handlekey(int, wint_t);
 static	void	 handleresize(void);
 static	void	 handlesearchkey(wint_t);
 static	void	 handlesearchpos(wint_t);
@@ -417,6 +418,147 @@ exitselect(void)
 	state = pstate;
 	drawfooter();
 	drawbody();
+}
+
+static void
+handlekey(int err, wint_t c)
+{
+	if (err == ERR)
+		return;
+	if (c == KEY_RESIZE) {
+		handleresize();
+		return;
+	}
+	switch (state) {
+	case PLAYING:
+		switch (err) {
+		case OK:
+			switch (c) {
+			case 'q':
+				quit = TRUE;
+				break;
+			case 's':
+				initsearch();
+				break;
+			case 'n':
+				playskip();
+				break;
+			case 'p':
+				playpause();
+				break;
+			case 'N':
+				playnextmix();
+				break;
+			default:
+				break;
+				}
+			break;
+		default:
+			break;
+		}
+		break;
+	case SEARCH:
+		switch (err) {
+		case KEY_CODE_YES:
+			switch (c) {
+			case KEY_BACKSPACE:
+				if (screen.pos > 0) {
+					screen.pos--;
+					listpop();
+				}
+				break;
+			case KEY_DC:
+				listpop();
+				break;
+			case KEY_ENTER:
+				search();
+				break;
+			case KEY_LEFT:
+			case KEY_RIGHT:
+				handlesearchpos(c);
+			default:
+				break;
+			}
+			break;
+		case OK:
+			switch (c) {
+			case 27: /* Escape */
+				exitsearch();
+				break;
+			case 10: /* Enter */
+				search();
+				break;
+			case 32: /* Spacebar */
+				break;
+			case 127: /* Backspace */
+				if (screen.pos > 0) {
+					screen.pos--;
+					listpop();
+				}
+				break;
+			default:
+				handlesearchkey(c);
+				break;
+			}
+			break;
+		default:
+			break;
+		}
+		break;
+	case SELECT:
+		switch (err) {
+		case KEY_CODE_YES:
+			switch (c) {
+			case KEY_UP:
+				selection.pos--;
+				drawselect();
+				break;
+			case KEY_DOWN:
+				selection.pos++;
+				drawselect();
+				break;
+			case KEY_ENTER:
+				playselect();
+				break;
+			default:
+				break;
+			}
+		case OK:
+			switch (c) {
+			case 27: /* Escape */
+				exitselect();
+				break;
+			case 10: /* Enter */
+				playselect();
+				break;
+			default:
+				break;
+			}
+		default:
+			break;
+		}
+		break;
+	case START:
+		switch (err) {
+		case OK:
+			switch (c) {
+			case 'q':
+				quit = TRUE;
+				break;
+			case 's':
+				initsearch();
+				break;
+			default:
+				break;
+			}
+			break;
+		default:
+			break;
+		}
+		break;
+	default:
+		break;
+	}
 }
 
 static void
@@ -1025,7 +1167,7 @@ main(void)
 {
 	libvlc_event_manager_t *vlc_em;
 	libvlc_callback_t callback = songend;
-	int cerr, quit;
+	int err, quit;
 	wint_t c;
 
 	checklocale();
@@ -1046,8 +1188,7 @@ main(void)
 	quit = FALSE;
 	state = START;
 	while (quit == FALSE) {
-		cerr = get_wch(&c);
-
+		err = get_wch(&c);
 		if (play.songended == TRUE && state == PLAYING) {
 			if (play.last_track == TRUE)
 				playnextmix();
@@ -1058,143 +1199,7 @@ main(void)
 			if (libvlc_media_player_get_time(vlc_mp) >= (30 * 1000))
 				report();
 		}
-
-		if (cerr == ERR)
-			continue;
-		if (c == KEY_RESIZE) {
-			handleresize();
-			continue;
-		}
-		switch (state) {
-		case PLAYING:
-			switch (cerr) {
-			case OK:
-				switch (c) {
-				case 'q':
-					quit = TRUE;
-					break;
-				case 's':
-					initsearch();
-					break;
-				case 'n':
-					playskip();
-					break;
-				case 'p':
-					playpause();
-					break;
-				case 'N':
-					playnextmix();
-					break;
-				default:
-					break;
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		case SEARCH:
-			switch (cerr) {
-			case KEY_CODE_YES:
-				switch (c) {
-				case KEY_BACKSPACE:
-					if (screen.pos > 0) {
-						screen.pos--;
-						listpop();
-					}
-					break;
-				case KEY_DC:
-					listpop();
-					break;
-				case KEY_ENTER:
-					search();
-					break;
-				case KEY_LEFT:
-				case KEY_RIGHT:
-					handlesearchpos(c);
-				default:
-					break;
-				}
-				break;
-			case OK:
-				switch (c) {
-				case 27: /* Escape */
-					exitsearch();
-					break;
-				case 10: /* Enter */
-					search();
-					break;
-				case 32: /* Spacebar */
-					break;
-				case 127: /* Backspace */
-					if (screen.pos > 0) {
-						screen.pos--;
-						listpop();
-					}
-					break;
-				default:
-					handlesearchkey(c);
-					break;
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		case SELECT:
-			switch (cerr) {
-			case KEY_CODE_YES:
-				switch (c) {
-				case KEY_UP:
-					selection.pos--;
-					drawselect();
-					break;
-				case KEY_DOWN:
-					selection.pos++;
-					drawselect();
-					break;
-				case KEY_ENTER:
-					playselect();
-					break;
-				default:
-					break;
-				}
-			case OK:
-				switch (c) {
-				case 27: /* Escape */
-					exitselect();
-					break;
-				case 10: /* Enter */
-					playselect();
-					break;
-				default:
-					break;
-				}
-			default:
-				break;
-			}
-			break;
-		case START:
-			switch (cerr) {
-			case OK:
-				switch (c) {
-				case 'q':
-					quit = TRUE;
-					break;
-				case 's':
-					initsearch();
-					break;
-				default:
-					break;
-				}
-				break;
-			default:
-				break;
-			}
-			break;
-		default:
-			break;
-		}
+		handlekey(err, c);
 	}
 
 	(void) endwin();
