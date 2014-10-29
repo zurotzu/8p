@@ -105,6 +105,8 @@ static	void	 listpush(wint_t);
 static	int	 mod(int, int);
 static	void	 playfirst(void);
 static	void	 playnext(void);
+static	void	 playnextmix(void);
+static	void	 playpause(void);
 static	void	 playselect(void);
 static	void	 playskip(void);
 static	void	 playsong(void);
