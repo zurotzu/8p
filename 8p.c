@@ -422,6 +422,7 @@ exitselect(void)
 	drawbody();
 }
 
+/* Return TRUE (1) if user wants to quit, else FALSE (0) */
 static int
 handlekey(int err, wint_t c)
 {
