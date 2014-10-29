@@ -426,7 +426,7 @@ static int
 handlekey(int err, wint_t c)
 {
 	int quit = FALSE;
-	
+
 	if (err == ERR)
 		return quit;
 	if (c == KEY_RESIZE) {
