@@ -356,7 +356,7 @@ drawsearch(void)
 	int i;
 
 	(void) wclear(win_search);
-	for (i = 0; i < sizeof(txt)/sizeof(txt[0]); i++)
+	for (i = 0; i < (int)(sizeof(txt)/sizeof(txt[0])); i++)
 		(void) mvwprintw(win_search, i, 0, "%s", txt[i]);
 }
 
@@ -398,7 +398,7 @@ drawselect(void)
 	(void) wmove(win_select, 0,0);
 	count = 0;
 	i = select_pos;
-	while (count < len) {
+	while (count < (int) len) {
 		i = mod(i, len);
 		data = json_array_get(mixes, i);
 		name = json_object_get(data, "name");
@@ -1159,7 +1159,7 @@ searchchangepos(wint_t c)
 			searchstr_pos--;
 		break;
 	case KEY_RIGHT:
-		if (searchstr_pos < searchstr_length())
+		if (searchstr_pos < (int)searchstr_length())
 			searchstr_pos++;
 		break;
 	default:
@@ -1230,7 +1230,7 @@ searchstr_pop(void)
 
 	if (searchstr_head == NULL)
 		return;
-	if (searchstr_pos >= searchstr_length())
+	if (searchstr_pos >= (int)searchstr_length())
 		return;
 	it = searchstr_head;
 	if (searchstr_pos == 0) {
