@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#define _XOPEN_SOURCE 700	/* Needed for wcwidth */
 #define _XOPEN_SOURCE_EXTENDED	/* Needed for wchar support */
 
 #include <bsd/string.h>
@@ -32,7 +33,7 @@
 
 #define APIKEY		"e233c13d38d96e3a3a0474723f6b3fcd21904979"
 #define DELAY		15	/* Half-delay time */
-#define ESCDELAY	10	/* ms to wait after reading ESC */
+#define ESCDELAY	10	/* Time (ms)  to wait after reading ESC */
 #define BODY_HEIGHT	800	/* Pad height of body*/
 #define FOOTER_HEIGHT	1	/* Pad height of footer */
 #define HEADER_HEIGHT	2	/* Pad height of header */
@@ -45,85 +46,95 @@ struct buf_t {
 	char	*data;
 	size_t	 size;
 };
-struct node_t {
-	struct node_t	*next;
-	wchar_t		 c;
-};
-struct screen_t {
-	WINDOW	*body;
-	WINDOW	*footer;
-	WINDOW	*header;
-	WINDOW	*mainwindow;
-	WINDOW	*search;
-	WINDOW	*select;
-	int	 pos;
-	int	 y;
-};
-struct select_t {
-	json_t	*root;
-	int	 pos;
-};
-struct play_t {
-	int	 last_track;
-	int	 skip_allowed;
-	char	 mix_name[100];
-	char	 track_name[100];
-	int	 i;
-	int	 mix_id;
-	int	 reported;
-	int	 songended;
-	int	 track_id;
+struct searchstr_node {
+	struct searchstr_node	*next;
+	wchar_t			 c;
 };
 
+/* Init */
 static	void	 checklocale(void);
-static	size_t	 curlwrite(void *, size_t, size_t, void *);
+static	void	 initglobals(void);
+static	void	 initncurses(void);
+static	void	 initvlc(void);
+/* Cleanup */
+static	void	 cleanupncurses(void);
+static	void	 cleanupvlc(void);
+/* Search */
+static	void	 search(void);
+static	void	 searchaddchar(wint_t);
+static	void	 searchbackspace(void);
+static	void	 searchchangepos(wint_t);
+static	void	 searchdelete(void);
+static	void	 searchescape(void);
+static	void	 searchinit(void);
+static	void	 searchstr_clear(void);
+static	size_t	 searchstr_length(void);
+static	void	 searchstr_pop(void);
+static	void	 searchstr_push(wint_t);
+/* Select */
+static	void	 selectchangepos(wint_t);
+static	void	 selectescape(void);
+static	void	 selectmix(void);
+/* Play */
+static	char	*getplaytoken(void);
+static	int	 needtoreport(void);
+static	void	 mixnext(void);
+static	void	 playpause(void);
+static	void	 trackfirst(void);
+static	void	 tracknext(void);
+static	void	 trackplay(void);
+static	void	 trackreport(void);
+static	void	 trackskip(void);
+	void	 vlc_event_error(const struct libvlc_event_t*, void*);
+	void	 vlc_event_trackend(const struct libvlc_event_t*, void*);
+/* Draw */
 static	void	 drawbody(void);
 static	void	 drawborders(void);
+static	void	 drawerror(char*);
 static	void	 drawfooter(void);
 static	void	 drawheader(void);
-static	void	 drawplaylist(void);
+static	void	 drawplaylistinit(void);
+static	void	 drawplaylistupdate(void);
 static	void	 drawsearch(void);
-static	void	 drawsearching(void);
+static	void	 drawsearch_wait(void);
 static	void	 drawselect(void);
 static	void	 drawwelcome(void);
-static	void	 exitsearch(void);
-static	void	 exitselect(void);
-static	char	*fetch(char *);
-static	char	*getplaytoken(void);
-static	int	 handlekey(int, wint_t);
 static	void	 handleresize(void);
-static	void	 handlesearchkey(wint_t);
-static	void	 handlesearchpos(wint_t);
-static	void	 initncurses(void);
-static	void	 initsearch(void);
+/* Other */
+static	size_t	 curlwrite(void*, size_t, size_t, void*);
+static	char	*fetch(char*);
+static	int	 handlekey(int,wint_t);
 static	size_t	 intlen(int);
-static	void	 listclean(void);
-static	int	 listlength(void);
-static	void	 listpop(void);
-static	void	 listprint(void);
-static	void	 listpush(wint_t);
 static	int	 mod(int, int);
-static	void	 playfirst(void);
-static	void	 playnext(void);
-static	void	 playnextmix(void);
-static	void	 playpause(void);
-static	void	 playselect(void);
-static	void	 playskip(void);
-static	void	 playsong(void);
-static	void	 report(void);
-static	void	 search(void);
-void		 songend(const struct libvlc_event_t *, void *);
-static	void	 updateplaylist(void);
 
 /* Globals */
-static char			*playtoken;
 static int			 pstate, state;
+static char			*playtoken;
+static int			 mix_id;
+static char			*mix_name;
+static int			 track_ended;
+static int			 track_id;
+static int			 track_last;
+static char			*track_name;
+static int			 track_number;
+static int			 track_reported;
+static int			 track_skip_allowed;
+static struct searchstr_node	*searchstr_head;
+static char			*searchstr_last;
+static int			 searchstr_pos;
+static int			 select_pos;
+static json_t			*select_root;
 static libvlc_instance_t	*vlc_inst;
 static libvlc_media_player_t	*vlc_mp;
-static struct node_t		*head;
-static struct play_t		 play;
-static struct screen_t		 screen;
-static struct select_t		 selection;
+static libvlc_event_manager_t	*vlc_em;
+static WINDOW			*win_body;
+static WINDOW			*win_footer;
+static WINDOW			*win_header;
+static WINDOW			*win_main;
+static WINDOW			*win_search;
+static WINDOW			*win_select;
+static int			 win_pos;
+static int			 win_y;
 
 static void
 checklocale(void)
@@ -137,6 +148,19 @@ checklocale(void)
 	     strstr(locale, "UTF8")  == NULL &&
 	     strstr(locale, "utf8")  == NULL))
 		errx(1, "UTF-8 locale expected");
+}
+
+static void
+cleanupncurses(void)
+{
+	(void) endwin();
+}
+
+static void
+cleanupvlc(void)
+{
+	libvlc_media_player_release(vlc_mp);
+	libvlc_release(vlc_inst);
 }
 
 static size_t
@@ -164,42 +188,42 @@ drawbody(void)
 
 	switch (state) {
 	case SEARCH:
-		win = screen.search;
+		win = win_search;
 		break;
 	case SELECT:
-		win = screen.select;
+		win = win_select;
 		break;
 	default:
-		win = screen.body;
+		win = win_body;
 		break;
 	}
 	(void) prefresh(win, 0, 0, HEADER_HEIGHT+3, 2, LINES-4-FOOTER_HEIGHT,
-	    COLS-4);
+			COLS-4);
 }
 
 static void
-drawplaylist(void)
+drawplaylistinit(void)
 {
-	(void) wclear(screen.body);
-	(void) mvwprintw(screen.body, 0, 0, "Playlist");
-	(void) mvwprintw(screen.body, 1, 0, "--------");
-	screen.y = 3;
+	(void) wclear(win_body);
+	(void) mvwprintw(win_body, 0, 0, "Playlist");
+	(void) mvwprintw(win_body, 1, 0, "--------");
+	win_y = 3;
 	drawbody();
 }
 
 static void
-updateplaylist(void)
+drawplaylistupdate(void)
 {
-	(void) mvwprintw(screen.body, screen.y, 0, "%d. %s\n",
-	    play.i, play.track_name);
-	screen.y = getcury(screen.body);
+	(void) mvwprintw(win_body, win_y, 0, "%d. %s\n",
+			 track_number, track_name);
+	win_y = getcury(win_body);
 	drawbody();
 }
 
 static void
 drawborders(void)
 {
-	WINDOW *win = screen.mainwindow;
+	WINDOW *win = win_main;
 	int x, y;
 
 	(void) wclear(win);
@@ -208,7 +232,7 @@ drawborders(void)
 			for (x = 1; x < COLS-1; x++)
 				(void) mvwaddch(win, y, x, ACS_HLINE);
 		} else if (LINES> HEADER_HEIGHT+2 &&
-		    (y == LINES-FOOTER_HEIGHT-2 || y == LINES-1)) {
+			   (y == LINES-FOOTER_HEIGHT-2 || y == LINES-1)) {
 			for (x = 1; x < COLS-1; x++)
 				(void) mvwaddch(win, y, x, ACS_HLINE);
 		}
@@ -217,7 +241,8 @@ drawborders(void)
 			(void) mvwaddstr(win, y, 3, " 8p ");
 			(void) mvwaddch(win, y, COLS-1, ACS_URCORNER);
 		} else if ((y == HEADER_HEIGHT+1 ||
-		    y == LINES-FOOTER_HEIGHT-2) && LINES > HEADER_HEIGHT+2) {
+			    y == LINES-FOOTER_HEIGHT-2) &&
+			   LINES > HEADER_HEIGHT+2) {
 			(void) mvwaddch(win, y, 0, ACS_LTEE);
 			(void) mvwaddch(win, y, COLS-1, ACS_RTEE);
 		} else if (y == LINES-1) {
@@ -236,11 +261,11 @@ drawerror(char *err)
 {
 	if (err == NULL)
 		return;
-	(void) wclear(screen.footer);
-	(void) mvwprintw(screen.footer, 0, 0, "Warning: %s", err);
+	(void) wclear(win_footer);
+	(void) mvwprintw(win_footer, 0, 0, "Warning: %s", err);
 	(void) curs_set(0);
-	(void) prefresh(screen.footer, 0, 0, LINES-FOOTER_HEIGHT-1, 2,
-	    LINES-1, COLS-4);
+	(void) prefresh(win_footer, 0, 0, LINES-FOOTER_HEIGHT-1, 2, LINES-1,
+			COLS-4);
 	(void) sleep(2);
 	drawfooter();
 }
@@ -248,48 +273,62 @@ drawerror(char *err)
 static void
 drawfooter(void)
 {
+	struct searchstr_node *it;
 	char playing[] = "q Quit  s Search  p Play/Pause  n Next track"
-	    "  N Next mix";
+		"  N Next mix";
 	char search[] = "ESC Exit |  Search: ";
 	char select[] = "ESC Exit  Enter Select";
 	char start[] = "q Quit  s Search";
-	
-	(void) wclear(screen.footer);
+	int cursor_pos, i;
+
+	(void) wclear(win_footer);
 	switch (state) {
 	case PLAYING:
-		(void) mvwprintw(screen.footer, 0, 0, "%s", playing);
+		(void) mvwprintw(win_footer, 0, 0, "%s", playing);
 		(void) curs_set(0);
 		break;
 	case START:
-		(void) mvwprintw(screen.footer, 0, 0, "%s", start);
+		(void) mvwprintw(win_footer, 0, 0, "%s", start);
 		(void) curs_set(0);
 		break;
 	case SEARCH:
-		(void) mvwprintw(screen.footer, 0, 0, "%s", search);
-		listprint();
+		(void) mvwprintw(win_footer, 0, 0, "%s", search);
+		for (it = searchstr_head; it != NULL; it = it->next)
+			(void) wprintw(win_footer, "%lc", it->c);
 		(void) curs_set(1);
-		(void) wmove(screen.footer, 0,
-		    ((int) strlen(search))+screen.pos);
+		cursor_pos = strlen(search);
+		it = searchstr_head;
+		for (i = 0; i < searchstr_pos; i++) {
+			cursor_pos += wcwidth(it->c);
+			it = it->next;
+		}
+		(void) wmove(win_footer, 0, cursor_pos);
 		break;
 	case SELECT:
-		(void) mvwprintw(screen.footer, 0, 0, "%s", select);
+		(void) mvwprintw(win_footer, 0, 0, "%s", select);
 		(void) curs_set(0);
 		break;
 	default:
 		(void) curs_set(0);
 		break;
 	}
-	(void) prefresh(screen.footer, 0, 0, LINES-FOOTER_HEIGHT-1, 2,
+	(void) prefresh(win_footer, 0, 0, LINES-FOOTER_HEIGHT-1, 2,
 	    LINES-1, COLS-4);
 }
 
 static void
 drawheader(void)
 {
-	(void) wclear(screen.header);
-	(void) mvwprintw(screen.header, 0, 0, "Mix:   %s", play.mix_name);
-	(void) mvwprintw(screen.header, 1, 0, "Track: %s", play.track_name);
-	(void) prefresh(screen.header, 0, 0, 1, 2, HEADER_HEIGHT, COLS-4);
+	(void) wclear(win_header);
+	if (mix_name != NULL)
+		(void) mvwprintw(win_header, 0, 0, "Mix:   %s", mix_name);
+	else
+		(void) mvwprintw(win_header, 0, 0, "Mix:");
+	if (track_name != NULL)
+		(void) mvwprintw(win_header, 1, 0, "Track: %s", track_name);
+	else
+		(void) mvwprintw(win_header, 1, 0, "Track:");
+	(void) prefresh(win_header, 0, 0, 1, 2, HEADER_HEIGHT, COLS-4);
 }
 
 static void
@@ -316,16 +355,16 @@ drawsearch(void)
 	     "Note: no spaces allowed."};
 	int i;
 
-	(void) wclear(screen.search);
+	(void) wclear(win_search);
 	for (i = 0; i < sizeof(txt)/sizeof(txt[0]); i++)
-		(void) mvwprintw(screen.search, i, 0, "%s", txt[i]);
+		(void) mvwprintw(win_search, i, 0, "%s", txt[i]);
 }
 
 static void
-drawsearching(void)
+drawsearch_wait(void)
 {
-	(void) wclear(screen.select);
-	(void) mvwprintw(screen.select, 0, 0, "Searching...");
+	(void) wclear(win_select);
+	(void) mvwprintw(win_select, 0, 0, "Searching...");
 	drawbody();
 }
 
@@ -336,23 +375,29 @@ drawselect(void)
 	json_t *data, *descr, *mix_set, *mixes, *name, *tags, *plays, *likes;
 	size_t len;
 
-	mix_set = json_object_get(selection.root, "mix_set");
+	mix_set = json_object_get(select_root, "mix_set");
 	if (mix_set == NULL) {
-		json_decref(selection.root);
+		json_decref(select_root);
 		drawerror("Search returned no results.");
+		state = pstate;
+		drawbody();
+		drawfooter();
 		return;
 	}
 	mixes = json_object_get(mix_set, "mixes");
 	if (!json_is_array(mixes)) {
-		json_decref(selection.root);
+		json_decref(select_root);
 		drawerror("Search returned no results.");
+		state = pstate;
+		drawbody();
+		drawfooter();
 		return;
 	}
 	len = json_array_size(mixes);
-	(void) wclear(screen.select);
-	(void) wmove(screen.select, 0,0);
+	(void) wclear(win_select);
+	(void) wmove(win_select, 0,0);
 	count = 0;
-	i = selection.pos;
+	i = select_pos;
 	while (count < len) {
 		i = mod(i, len);
 		data = json_array_get(mixes, i);
@@ -361,33 +406,33 @@ drawselect(void)
 		descr = json_object_get(data, "description");
 		plays = json_object_get(data, "plays_count");
 		likes = json_object_get(data, "likes_count");
-		if (i == mod(selection.pos, len))
-			(void) wattron(screen.select, A_REVERSE);
-		(void) wattron(screen.select, A_BOLD);
-		(void) wprintw(screen.select, "%d. %s\n", i+1,
+		if (i == select_pos)
+			(void) wattron(win_select, A_REVERSE);
+		(void) wattron(win_select, A_BOLD);
+		(void) wprintw(win_select, "%d. %s\n", i+1,
 		    json_string_value(name));
-		(void) wattroff(screen.select, A_BOLD);
-		if (i == mod(selection.pos, len))
-			(void) wattroff(screen.select, A_REVERSE);
-		(void) wattron(screen.select, A_BOLD);
-		(void) wprintw(screen.select, "Description:\n");
-		(void) wattroff(screen.select, A_BOLD);
-		(void) wprintw(screen.select, "%s\n", json_string_value(descr));
-		(void) wattron(screen.select, A_BOLD);
-		(void) wprintw(screen.select, "Tags:\n");
-		(void) wattroff(screen.select, A_BOLD);
-		(void) wprintw(screen.select, "%s\n", json_string_value(tags));
-		(void) wattron(screen.select, A_BOLD);
-		(void) wprintw(screen.select, "Number of plays:\n");
-		(void) wattroff(screen.select, A_BOLD);
-		(void) wprintw(screen.select, "%d\n",
+		(void) wattroff(win_select, A_BOLD);
+		if (i == select_pos)
+			(void) wattroff(win_select, A_REVERSE);
+		(void) wattron(win_select, A_BOLD);
+		(void) wprintw(win_select, "Description:\n");
+		(void) wattroff(win_select, A_BOLD);
+		(void) wprintw(win_select, "%s\n", json_string_value(descr));
+		(void) wattron(win_select, A_BOLD);
+		(void) wprintw(win_select, "Tags:\n");
+		(void) wattroff(win_select, A_BOLD);
+		(void) wprintw(win_select, "%s\n", json_string_value(tags));
+		(void) wattron(win_select, A_BOLD);
+		(void) wprintw(win_select, "Number of plays:\n");
+		(void) wattroff(win_select, A_BOLD);
+		(void) wprintw(win_select, "%d\n",
 		    (int) json_integer_value(plays));
-		(void) wattron(screen.select, A_BOLD);
-		(void) wprintw(screen.select, "Number of likes:\n");
-		(void) wattroff(screen.select, A_BOLD);
-		(void) wprintw(screen.select, "%d\n",
+		(void) wattron(win_select, A_BOLD);
+		(void) wprintw(win_select, "Number of likes:\n");
+		(void) wattroff(win_select, A_BOLD);
+		(void) wprintw(win_select, "%d\n",
 		    (int) json_integer_value(likes));
-		(void) wprintw(screen.select, "\n---\n\n");
+		(void) wprintw(win_select, "\n---\n\n");
 		i++;
 		count++;
 	}
@@ -397,28 +442,10 @@ drawselect(void)
 static void
 drawwelcome(void)
 {
-	(void) wclear(screen.body);
-	(void) mvwprintw(screen.body, 0, 0, "Welcome to 8p.");
-	(void) mvwprintw(screen.body, 1, 0,
+	(void) wclear(win_body);
+	(void) mvwprintw(win_body, 0, 0, "Welcome to 8p.");
+	(void) mvwprintw(win_body, 1, 0,
 	    "Press \"s\" to start searching for 8tracks.com mixes.");
-	drawbody();
-}
-
-static void
-exitsearch(void)
-{
-	listclean();
-	state = pstate;
-	drawfooter();
-	drawbody();
-}
-
-static void
-exitselect(void)
-{
-	json_decref(selection.root);
-	state = pstate;
-	drawfooter();
 	drawbody();
 }
 
@@ -439,71 +466,41 @@ handlekey(int err, wint_t c)
 		switch (err) {
 		case OK:
 			switch (c) {
-			case 'q':
-				quit = TRUE;
-				break;
-			case 's':
-				initsearch();
-				break;
-			case 'n':
-				playskip();
-				break;
-			case 'p':
-				playpause();
-				break;
-			case 'N':
-				playnextmix();
-				break;
-			default:
-				break;
-				}
+			case 'q':	quit = TRUE;  break;
+			case 's':	searchinit(); break;
+			case 'n':	trackskip();  break;
+			case 'p':	playpause();  break;
+			case 'N':	mixnext();    break;
+			default:	break;
+			}
 			break;
-		default:
-			break;
+		default:	break;
 		}
 		break;
 	case SEARCH:
 		switch (err) {
 		case KEY_CODE_YES:
 			switch (c) {
-			case KEY_BACKSPACE:
-				if (screen.pos > 0) {
-					screen.pos--;
-					listpop();
-				}
-				break;
-			case KEY_DC:
-				listpop();
-				break;
-			case KEY_ENTER:
-				search();
-				break;
-			case KEY_LEFT:
-			case KEY_RIGHT:
-				handlesearchpos(c);
-			default:
-				break;
+			case KEY_BACKSPACE:	searchbackspace(); break;
+			case KEY_DC:		searchdelete(); break;
+			case KEY_ENTER:		search(); break;
+			case KEY_LEFT:		/* Fallthrough */
+			case KEY_RIGHT:		searchchangepos(c); break;
+			default:		break;
 			}
 			break;
 		case OK:
+			/*  10: Enter
+			 *  27: Escape
+			 *  32: Spacebar
+			 * 127: Backspace
+			 */
 			switch (c) {
-			case 27: /* Escape */
-				exitsearch();
-				break;
-			case 10: /* Enter */
-				search();
-				break;
-			case 32: /* Spacebar */
-				break;
-			case 127: /* Backspace */
-				if (screen.pos > 0) {
-					screen.pos--;
-					listpop();
-				}
-				break;
-			default:
-				handlesearchkey(c);
-				break;
+			case  10:	search(); break;
+			case  27:	searchescape(); break;
+			case  32:	break; /* Ignore */
+			case 127:	searchbackspace(); break;
+			default:	searchaddchar(c); break;
 			}
 			break;
 		default:
@@ -514,55 +511,36 @@ handlekey(int err, wint_t c)
 		switch (err) {
 		case KEY_CODE_YES:
 			switch (c) {
-			case KEY_UP:
-				selection.pos--;
-				drawselect();
-				break;
-			case KEY_DOWN:
-				selection.pos++;
-				drawselect();
-				break;
-			case KEY_ENTER:
-				playselect();
-				break;
-			default:
-				break;
+			case KEY_UP:	/* Fallthrough */
+			case KEY_DOWN:	selectchangepos(c); break;
+			case KEY_ENTER:	selectmix(); break;
+			default:	break;
 			}
 		case OK:
+			/* 10: Enter
+			 * 27: Escape
+			 */
 			switch (c) {
-			case 27: /* Escape */
-				exitselect();
-				break;
-			case 10: /* Enter */
-				playselect();
-				break;
-			default:
-				break;
+			case 10:	selectmix(); break;
+			case 27:	selectescape(); break;
+			default:	break;
 			}
-		default:
-			break;
+		default:	break;
 		}
 		break;
 	case START:
 		switch (err) {
 		case OK:
 			switch (c) {
-			case 'q':
-				quit = TRUE;
-				break;
-			case 's':
-				initsearch();
-				break;
-			default:
-				break;
+			case 'q':	quit = TRUE; break;
+			case 's':	searchinit(); break;
+			default:	break;
 			}
 			break;
-		default:
-			break;
+		default:	break;
 		}
 		break;
-	default:
-		break;
+	default:	break;
 	}
 
 	return quit;
@@ -580,34 +558,23 @@ handleresize(void)
 }
 
 static void
-handlesearchkey(wint_t c)
+initglobals(void)
 {
-	listpush(c);
-	screen.pos++;
-	drawfooter();
-}
-
-static void
-handlesearchpos(wint_t c)
-{
-	if (c == KEY_LEFT) {
-		if (screen.pos > 0)
-			screen.pos--;
-	} else if (c == KEY_RIGHT) {
-		if (screen.pos < listlength())
-			screen.pos++;
-	}
-	drawfooter();
+	mix_name       = NULL;
+	playtoken      = NULL;
+	searchstr_head = NULL;
+	searchstr_last = NULL;
+	track_name     = NULL;
 }
 
 static void
 initncurses(void)
 {
-	screen.mainwindow = initscr();
-	if (screen.mainwindow == NULL)
+	win_main = initscr();
+	if (win_main == NULL)
 		errx(1, "failed to initialize ncurses");
-	if ((meta(screen.mainwindow, true) == ERR) ||
-	    (keypad(screen.mainwindow, true) == ERR) ||
+	if ((meta(win_main, true) == ERR) ||
+	    (keypad(win_main, true) == ERR) ||
 	    (noecho() == ERR) ||
 	    (halfdelay(DELAY) == ERR) ||
 	    (curs_set(0) == ERR) ||
@@ -615,13 +582,13 @@ initncurses(void)
 		(void) endwin();
 		errx(1, "failed to initialize ncurses");
 	}
-	screen.header = newpad(HEADER_HEIGHT, 200);
-	screen.body = newpad(BODY_HEIGHT, 200);
-	screen.search = newpad(BODY_HEIGHT, 200);
-	screen.select = newpad(BODY_HEIGHT, 200);
-	screen.footer = newpad(FOOTER_HEIGHT, 200);
-	screen.y = 0;
-	screen.pos = 0;
+	win_header = newpad(HEADER_HEIGHT, 200);
+	win_body = newpad(BODY_HEIGHT, 200);
+	win_search = newpad(BODY_HEIGHT, 200);
+	win_select = newpad(BODY_HEIGHT, 200);
+	win_footer = newpad(FOOTER_HEIGHT, 200);
+	win_y = 0;
+	win_pos = 0;
 
 	drawborders();
 	drawsearch();
@@ -631,14 +598,19 @@ initncurses(void)
 }
 
 static void
-initsearch(void)
+initvlc(void)
 {
-	pstate = state;
-	state = SEARCH;
-	head = NULL;
-	screen.pos = 0;
-	drawbody();
-	drawfooter();
+	libvlc_callback_t callback;
+
+	vlc_inst = libvlc_new(0, NULL);
+	vlc_mp = libvlc_media_player_new(vlc_inst);
+	vlc_em = libvlc_media_player_event_manager(vlc_mp);
+	callback = vlc_event_trackend;
+	libvlc_event_attach(vlc_em, libvlc_MediaPlayerEndReached, callback,
+			    NULL);
+	callback = vlc_event_error;
+	libvlc_event_attach(vlc_em, libvlc_MediaPlayerEncounteredError,
+			    callback, NULL);
 }
 
 static size_t
@@ -715,14 +687,13 @@ static char *
 getplaytoken(void) {
 	char *js, *ret;
 	char url[] = "http://8tracks.com/sets/new";
-	json_error_t error;
 	json_t *playtoken, *root;
 	size_t len;
 
 	js = fetch(url);
 	if (js == NULL)
 		return NULL;
-	root = json_loads(js, 0, &error);
+	root = json_loads(js, 0, NULL);
 	free(js);
 	if (root == NULL)
 		return NULL;
@@ -736,7 +707,7 @@ getplaytoken(void) {
 		return NULL;
 	}
 	len = strlen(json_string_value(playtoken)) + 1;
-	ret = malloc(len*sizeof(char));
+	ret = malloc(len * sizeof(char));
 	if (ret == NULL)
 		err(1, NULL);
 	strlcpy(ret, json_string_value(playtoken), len); 
@@ -745,94 +716,15 @@ getplaytoken(void) {
 	return ret;
 }
 
-static void
-listclean(void)
-{
-	struct node_t *it, *tmp;
-
-	it = head;
-	while (it != NULL) {
-		tmp = it->next;
-		free(it);
-		it = tmp;
-	}
-	screen.pos = 0;
-	head = NULL;
-}
-
 static int
-listlength(void)
+needtoreport(void)
 {
-	struct node_t *it;
-	int i;
+	int ret = FALSE;
 
-	i = 0;
-	it = head;
-	while (it != NULL) {
-		it = it->next;
-		i++;
-	}
-	return i;
-}
+	if (libvlc_media_player_get_time(vlc_mp) >= (30 * 1000))
+		ret = TRUE;
 
-static void
-listpop(void)
-{
-	struct node_t *it, *tmp;
-	int i;
-
-	if (head == NULL)
-		return;
-	if (screen.pos > listlength()-1)
-		return;
-	it = head;
-	if (screen.pos == 0) {
-		head = it->next;
-		free(it);
-	} else {
-		for (i = 1; i < screen.pos; i++)
-			it = it->next;
-		tmp = it->next;
-		it->next = it->next->next;
-		free(tmp);
-	}
-	drawfooter();
-}
-
-static void
-listprint(void)
-{
-	struct node_t *it;
-
-	it = head;
-	while (it != NULL) {
-		wprintw(screen.footer, "%lc", it->c);
-		it = it->next;
-	}
-}
-
-static void
-listpush(wint_t c)
-{
-	struct node_t *it, *new;
-	int i;
-
-	new = malloc(sizeof(struct node_t));
-	if (new == NULL)
-		err(1, NULL);
-	new->c = c;
-	new->next = NULL;
-
-	if (screen.pos == 0) {
-		new->next = head;
-		head = new;
-	} else {
-		it = head;
-		for (i = 1; i < screen.pos; i++)
-			it = it->next;
-		new->next = it->next;
-		it->next = new;
-	}
+	return ret;
 }
 
 static int
@@ -848,13 +740,12 @@ mod(int a, int b)
 }
 
 static void
-playfirst(void)
+trackfirst(void)
 {
 	char *js, *url;
 	char prefix[] = "http://8tracks.com/sets/";
 	char interfix[] = "/play?mix_id=";
 	size_t len;
-	json_error_t error;
 
 	if (playtoken == NULL)
 		playtoken = getplaytoken();
@@ -865,101 +756,108 @@ playfirst(void)
 	}
 
 	len = strlen(prefix) + strlen(playtoken) + strlen(interfix) +
-	    intlen(play.mix_id) + 1;
-	url = malloc(len*sizeof(char));
+		intlen(mix_id) + 1;
+	url = malloc(len * sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
 	(void) snprintf(url, len, "%s%s%s%d", prefix, playtoken, interfix,
-	    play.mix_id);
+			mix_id);
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
 		drawerror("Failed to play the first track.");
 		return;
 	}
-	selection.root = json_loads(js, 0, &error);
+	select_root = json_loads(js, 0, NULL);
 	free(js);
-	play.i = 0;
-	playsong();
+	if (select_root == NULL) {
+		drawerror("Failed to play the first track.");
+		return;
+	}
+	track_number = 0;
+	trackplay();
+	drawplaylistupdate();
+	drawheader();
 }
 
 static void
-playnext(void)
+tracknext(void)
 {
 	char *js, *url;
 	char prefix[] = "http://8tracks.com/sets/";
 	char interfix[] = "/next?mix_id=";
 	size_t len;
-	json_error_t error;
 
-	if (playtoken == NULL)
-		return;
 	len = strlen(prefix) + strlen(playtoken) + strlen(interfix) +
-	    intlen(play.mix_id) + 1;
-	url = malloc(len*sizeof(char));
+		intlen(mix_id) + 1;
+	url = malloc(len * sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
 	(void) snprintf(url, len, "%s%s%s%d", prefix, playtoken, interfix,
-	    play.mix_id);
+			mix_id);
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
 		drawerror("Failed to play next track.");
 		return;
 	}
-	selection.root = json_loads(js, 0, &error);
+	select_root = json_loads(js, 0, NULL);
 	free(js);
-	playsong();
-	updateplaylist();
+	trackplay();
+	drawplaylistupdate();
 	drawheader();
 }
 
+/* For some reason requesting a similar mix often returns the same mix.
+ * Which is a bit too similar for me.  Therefore we request the next mix
+ * based on the used search string.  Hopefully this will fix the problem.
+ */
 static void
-playnextmix(void)
+mixnext(void)
 {
 	char *js, *url;
 	char prefix[] = "http://8tracks.com/sets/";
 	char interfixone[] = "/next_mix?mix_id=";
-	char interfixtwo[] = "&smart_id=similar:";
+	char interfixtwo[] = "&smart_id=";
 	size_t len;
-	json_error_t error;
 	json_t *next_mix, *id, *name;
 
-	if (playtoken == NULL)
-		return;
-
 	len = strlen(prefix) + strlen(playtoken) + strlen(interfixone) +
-	    intlen(play.mix_id) + strlen(interfixtwo) + intlen(play.mix_id) + 1;
-	url = malloc(len*sizeof(char));
+		intlen(mix_id) + strlen(interfixtwo) + strlen(searchstr_last) +
+		1;
+	url = malloc(len * sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
-	(void) snprintf(url, len, "%s%s%s%d%s%d", prefix, playtoken,
-	    interfixone, play.mix_id, interfixtwo, play.mix_id);
+	(void) snprintf(url, len, "%s%s%s%d%s%s", prefix, playtoken,
+			interfixone, mix_id, interfixtwo, searchstr_last);
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
 		drawerror("Could not retrieve the next mix.");
 		return;
 	}
-	selection.root = json_loads(js, 0, &error);
+	select_root = json_loads(js, 0, NULL);
 	free(js);
-	next_mix = json_object_get(selection.root, "next_mix");
+	next_mix = json_object_get(select_root, "next_mix");
 	id = json_object_get(next_mix, "id");
 	if (id == NULL) {
 		drawerror("Could not retrieve the next mix.");
 		return;
 	}
-	play.mix_id = (int) json_integer_value(id);
+	mix_id = (int) json_integer_value(id);
 	name = json_object_get(next_mix, "name");
-	(void) snprintf(play.mix_name, sizeof(play.mix_name), "%s",
-	    json_string_value(name));
-	json_decref(selection.root);
+	if (mix_name != NULL)
+		free(mix_name);
+	len = strlen(json_string_value(name)) + 1;
+	mix_name = malloc(len * sizeof(char));
+	if (mix_name == NULL)
+		err(1, NULL);
+	(void) snprintf(mix_name, len, "%s", json_string_value(name));
+	json_decref(select_root);
 
-	drawplaylist();
-	playfirst();
-	drawheader();
-	updateplaylist();
+	drawplaylistinit();
 	drawfooter();
+	trackfirst();
 }
 
 static void
@@ -968,79 +866,117 @@ playpause(void)
 	libvlc_media_player_pause(vlc_mp);
 }
 
+/* Less checking is needed here, we already know that the json object
+ * is usable.
+ */
 static void
-playselect(void)
+selectmix(void)
 {
 	json_t *mix_set, *mixes, *data, *name, *id;
+	size_t len;
 
-	mix_set = json_object_get(selection.root, "mix_set");
+	mix_set = json_object_get(select_root, "mix_set");
 	mixes = json_object_get(mix_set, "mixes");
-	data = json_array_get(mixes,
-	    mod(selection.pos, json_array_size(mixes)));
+	data = json_array_get(mixes, select_pos);
 	name = json_object_get(data, "name");
 	id = json_object_get(data, "id");
-	(void) snprintf(play.mix_name, sizeof(play.mix_name), "%s",
-	    json_string_value(name));
-	play.mix_id = (int) json_integer_value(id);
-	json_decref(selection.root);
+	if (mix_name != NULL)
+		free(mix_name);
+	len = strlen(json_string_value(name)) + 1;
+	mix_name = malloc(len * sizeof(char));
+	(void) snprintf(mix_name, len, "%s", json_string_value(name));
+	mix_id = (int) json_integer_value(id);
+	json_decref(select_root);
 	    
 	state = PLAYING;
-	drawplaylist();
-	playfirst();
-	drawheader();
-	updateplaylist();
+	drawplaylistinit();
+	drawfooter();
+	trackfirst();
+}
+
+static void
+selectchangepos(wint_t c)
+{
+	json_t *mix_set, *mixes;
+	size_t len;
+
+	mix_set = json_object_get(select_root, "mix_set");
+	if (mix_set == NULL)
+		return;
+	mixes = json_object_get(mix_set, "mixes");
+	if (mixes == NULL)
+		return;
+	len = json_array_size(mixes);
+
+	switch (c) {
+	case KEY_UP:	select_pos = mod(select_pos-1, len); break;
+	case KEY_DOWN:	select_pos = mod(select_pos+1, len); break;
+	default:	break;
+	}
+	drawselect();
+}
+
+static void
+selectescape(void)
+{
+	json_decref(select_root);
+	state = pstate;
+	drawbody();
 	drawfooter();
 }
 
 static void
-playskip(void)
+trackskip(void)
 {
 	char *js, *url;
 	char prefix[] = "http://8tracks.com/sets/";
 	char interfix[] = "/skip?mix_id=";
 	size_t len;
-	json_error_t error;
 
-	if (playtoken == NULL)
-		return;
-	if (play.skip_allowed == FALSE) {
+	if (track_skip_allowed == FALSE) {
 		drawerror("Skip not allowed.");
 		return;
 	}
-	if (play.last_track == TRUE) {
-		playnextmix();
+	if (track_last == TRUE) {
+		drawerror("Playing the last track.  Skipping to next mix.");
+		mixnext();
 		return;
 	}
 
 	len = strlen(prefix) + strlen(playtoken) + strlen(interfix) +
-	    intlen(play.mix_id) + 1;
-	url = malloc(len*sizeof(char));
+		intlen(mix_id) + 1;
+	url = malloc(len * sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
 	(void) snprintf(url, len, "%s%s%s%d", prefix, playtoken, interfix,
-	    play.mix_id);
+			mix_id);
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
 		drawerror("Failed to skip track.");
 		return;
 	}
-	selection.root = json_loads(js, 0, &error);
+	select_root = json_loads(js, 0, NULL);
 	free(js);
+	if (select_root == NULL) {
+		drawerror("Failed to skip track.");
+		return;
+	}
 
-	playsong();
-	updateplaylist();
+	trackplay();
+	drawplaylistupdate();
 	drawheader();
 }
 
 static void
-playsong(void)
+trackplay(void)
 {
 	json_t *set, *at_last_track, *skip_allowed, *track_file_stream_url,
 	       *name, *performer, *track, *id;
 	libvlc_media_t *m;
+	size_t len;
 
-	set = json_object_get(selection.root, "set");
+	set = json_object_get(select_root, "set");
 	at_last_track = json_object_get(set, "at_last_track");
 	skip_allowed = json_object_get(set, "skip_allowed");
 	track = json_object_get(set, "track");
@@ -1049,41 +985,49 @@ playsong(void)
 	performer = json_object_get(track, "performer");
 	track_file_stream_url = json_object_get(track, "track_file_stream_url");
 	if (name != NULL && performer != NULL) {
-		(void) snprintf(play.track_name, sizeof(play.track_name),
-		    "%s - %s",
-		    json_string_value(performer), json_string_value(name));
+		if (track_name != NULL)
+			free(track_name);
+		len = strlen(json_string_value(performer)) +
+			strlen(json_string_value(name)) + strlen(" - ") + 1;
+		track_name = malloc(len * sizeof(char));
+		if (track_name == NULL)
+			err(1, NULL);
+		(void) snprintf(track_name, len, "%s - %s",
+				json_string_value(performer),
+				json_string_value(name));
 	}
 	if (id != NULL)
-		play.track_id = (int) json_integer_value(id);
-	play.reported = 0;
+		track_id = (int) json_integer_value(id);
+	track_reported = FALSE;
 	if (skip_allowed != NULL) {
 		if (json_is_true(skip_allowed))
-			play.skip_allowed = TRUE;
+			track_skip_allowed = TRUE;
 		else
-			play.skip_allowed = FALSE;
+			track_skip_allowed = FALSE;
 	}
 	if (at_last_track != NULL) {
 		if (json_is_true(at_last_track))
-			play.last_track = TRUE;
+			track_last = TRUE;
 		else
-			play.last_track = FALSE;
+			track_last = FALSE;
 	}
 	if (track_file_stream_url == NULL) {
-		json_decref(selection.root);
+		json_decref(select_root);
+		drawerror("Error retrieving song.");
 		return;
 	}
-	play.songended = FALSE;
-	play.i++;
+	track_ended = FALSE;
+	track_number++;
 	m = libvlc_media_new_location(vlc_inst,
-	    json_string_value(track_file_stream_url));
+				      json_string_value(track_file_stream_url));
 	libvlc_media_player_set_media(vlc_mp, m);
 	libvlc_media_release(m);
 	libvlc_media_player_play(vlc_mp);
-	json_decref(selection.root);
+	json_decref(select_root);
 }
 
 static void
-report(void)
+trackreport(void)
 {
 	char *js, *url;
 	char prefix[] = "http://8tracks.com/sets/";
@@ -1092,17 +1036,16 @@ report(void)
 	size_t len;
 
 	len = strlen(prefix) + strlen(playtoken) + strlen(interfixone) +
-	    intlen(play.track_id) + strlen(interfixtwo) + intlen(play.mix_id) +
-	    1;
+	      intlen(track_id) + strlen(interfixtwo) + intlen(mix_id) + 1;
 	url = malloc(len * sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
 	(void) snprintf(url, len, "%s%s%s%d%s%d", prefix, playtoken,
-	    interfixone, play.track_id, interfixtwo, play.mix_id);
+			interfixone, track_id, interfixtwo, mix_id);
 	js = fetch(url);
 	free(js);
 	free(url);
-	play.reported = 1;
+	track_reported = TRUE;
 }
 
 static void
@@ -1113,107 +1056,265 @@ search(void)
 	char prefix[] = "http://8tracks.com/mix_sets/";
 	char suffix[] = "?include=mixes";
 	int tmp_len;
-	json_error_t error;
 	size_t len;
-	struct node_t *it;
+	struct searchstr_node *it;
 
-	if (listlength() == 0) {
+	/* Build the url string.
+	 * If no search string is entered, default to smart id "all" */
+	if (searchstr_last != NULL)
+		free(searchstr_last);
+	if (searchstr_length() == 0) {
 		len = strlen(prefix) + strlen(basic) + strlen(suffix) + 1;
 		url = malloc(len * sizeof(char));
 		if (url == NULL)
 			err(1, NULL);
 		(void) snprintf(url, len, "%s%s%s", prefix, basic, suffix);
-	} else {
-		len = strlen(prefix) + listlength() * MB_CUR_MAX +
-		    strlen(suffix) + 1;
-		url = malloc(len * sizeof(char));
-		if (url == NULL)
-			err(1, NULL);
-		(void) snprintf(url, len, "%s", prefix);
 
+		len = strlen(basic) + 1;
+		searchstr_last = malloc(len * sizeof(char));
+		if (searchstr_last == NULL)
+			err(1, NULL);
+		(void) snprintf(searchstr_last, len, "%s", basic);
+	} else {
+		/* Convert wchar* search string to char*.
+		 * Store the result in searchstr_last.  We need it later if
+		 * the user wants to play the next mix.
+		 */
+		len = searchstr_length() * MB_CUR_MAX + 1;
+		searchstr_last = malloc(len * sizeof(char));
+		if (searchstr_last == NULL)
+			err(1, NULL);
+		searchstr_last[0] = '\0';
 		tmp = malloc(MB_CUR_MAX * sizeof(char));
 		if (tmp == NULL)
 			err(1, NULL);
-		it = head;
-		while (it != NULL) {
+		for (it = searchstr_head; it != NULL; it = it->next) {
 			tmp_len = wctomb(tmp, it->c);
 			tmp[tmp_len] = '\0';
-			(void) strlcat(url, tmp, len);
-			it = it->next;
+			(void) strlcat(searchstr_last, tmp, len);
 		}
 		free(tmp);
 
-		(void) strlcat(url, suffix, len);
-
-		listclean();
+		len = strlen(prefix) + strlen(searchstr_last) + strlen(suffix) +
+			1;
+		url = malloc(len * sizeof(char));
+		if (url == NULL)
+			err(1, NULL);
+		(void) snprintf(url, len, "%s%s%s", prefix, searchstr_last,
+			suffix);
 	}
-	state = SELECT;
-	drawsearching();
+	searchstr_clear();
+
+	/* Start the search */
+	drawsearch_wait();
 	js = fetch(url);
 	free(url);
 	if (js == NULL) {
 		state = pstate;
 		drawerror("Search failed.");
+		drawbody();
+		drawfooter();
 		return;
 	}
-	selection.root = json_loads(js, 0, &error);
+	/* Don't forget to decrement to reference count of
+	 * the json object when we are done selecting. */
+	select_root = json_loads(js, 0, NULL);
 	free(js);
-	selection.pos = 0;
+	if (select_root == NULL) {
+		state = pstate;
+		drawerror("Search failed.");
+		drawbody();
+		drawfooter();
+		return;
+	}
+	select_pos = 0;
+	state = SELECT;
 	drawselect();
 	drawfooter();
 }
 
-void
-songend(const struct libvlc_event_t *event, void *data)
+static void
+searchaddchar(wint_t c)
 {
-	play.songended = TRUE;
+	searchstr_push(c);
+	searchstr_pos++;
+	drawfooter();
+}
+
+static void
+searchbackspace(void)
+{
+	if (searchstr_pos > 0) {
+		searchstr_pos--;
+		searchstr_pop();
+	}
+}
+
+static void
+searchchangepos(wint_t c)
+{
+	switch (c) {
+	case KEY_LEFT:
+		if (searchstr_pos > 0)
+			searchstr_pos--;
+		break;
+	case KEY_RIGHT:
+		if (searchstr_pos < searchstr_length())
+			searchstr_pos++;
+		break;
+	default:
+		break;
+	}
+	drawfooter();
+}
+
+static void
+searchdelete(void)
+{
+	searchstr_pop();
+}
+
+static void
+searchescape(void)
+{
+	searchstr_clear();
+	state = pstate;
+	drawbody();
+	drawfooter();
+}
+
+static void
+searchinit(void)
+{
+	pstate = state;
+	state = SEARCH;
+	searchstr_clear();
+	drawbody();
+	drawfooter();
+}
+
+static void
+searchstr_clear(void)
+{
+	struct searchstr_node *it, *tmp;
+
+	it = searchstr_head;
+	while (it != NULL) {
+		tmp = it->next;
+		free(it);
+		it = tmp;
+	}
+	searchstr_pos = 0;
+	searchstr_head = NULL;
+}
+
+static size_t
+searchstr_length(void)
+{
+	struct searchstr_node *it;
+	size_t len;
+
+	len = 0;
+	for (it = searchstr_head; it != NULL; it = it->next)
+		len++;
+
+	return len;
+}
+
+/* Delete wchar from the list at cursor position (searchstr_pos) */
+static void
+searchstr_pop(void)
+{
+	struct searchstr_node *it, *tmp;
+	int i;
+
+	if (searchstr_head == NULL)
+		return;
+	if (searchstr_pos >= searchstr_length())
+		return;
+	it = searchstr_head;
+	if (searchstr_pos == 0) {
+		searchstr_head = it->next;
+		free(it);
+	} else {
+		for (i = 1; i < searchstr_pos; i++)
+			it = it->next;
+		tmp = it->next;
+		it->next = it->next->next;
+		free(tmp);
+	}
+	drawfooter();
+}
+
+/* Push wchar on the list at cursor position (searchstr_pos) */
+static void
+searchstr_push(wint_t c)
+{
+	struct searchstr_node *it, *new;
+	int i;
+
+	new = malloc(sizeof(struct searchstr_node));
+	if (new == NULL)
+		err(1, NULL);
+	new->c = c;
+	new->next = NULL;
+
+	if (searchstr_pos == 0) {
+		new->next = searchstr_head;
+		searchstr_head = new;
+	} else {
+		it = searchstr_head;
+		for (i = 1; i < searchstr_pos; i++)
+			it = it->next;
+		new->next = it->next;
+		it->next = new;
+	}
+}
+
+void
+vlc_event_trackend(const struct libvlc_event_t *event, void *data)
+{
+	track_ended = TRUE;
+}
+
+void
+vlc_event_error(const struct libvlc_event_t *event, void *data)
+{
+	/* TODO:
+	 * - Handle error
+	 */
 }
 
 int
 main(void)
 {
-	libvlc_event_manager_t *vlc_em;
-	libvlc_callback_t callback = songend;
 	int err, quit;
 	wint_t c;
 
 	checklocale();
 	initncurses();
+	initvlc();
+	initglobals();
 
-	/* initialize vlc */
-	vlc_inst = libvlc_new(0, NULL);
-	vlc_mp = libvlc_media_player_new(vlc_inst);
-	vlc_em = libvlc_media_player_event_manager(vlc_mp);
-	libvlc_event_attach(vlc_em, libvlc_MediaPlayerEndReached, callback,
-	    NULL);
-
-	play.mix_id = 0;
-	play.mix_name[0] = '\0';
-	play.track_name[0] = '\0';
-	play.songended = FALSE;
-	playtoken = NULL;
-	quit = FALSE;
 	state = START;
+	quit = FALSE;
 	while (quit == FALSE) {
+		if (state == PLAYING) {
+			if (track_ended == TRUE) {
+				if (track_last == TRUE)
+					mixnext();
+				else
+					tracknext();
+			} else if (track_reported == FALSE &&
+				   needtoreport() == TRUE)
+					trackreport();
+		}
 		err = get_wch(&c);
-		if (play.songended == TRUE && state == PLAYING) {
-			if (play.last_track == TRUE)
-				playnextmix();
-			else
-				playnext();
-		}
-		if (play.reported == 0 && state == PLAYING) {
-			if (libvlc_media_player_get_time(vlc_mp) >= (30 * 1000))
-				report();
-		}
 		quit = handlekey(err, c);
 	}
 
-	(void) endwin();
-	if (vlc_mp != NULL)
-		libvlc_media_player_release(vlc_mp);
-	if (vlc_inst != NULL)
-		libvlc_release(vlc_inst);
+	cleanupvlc();
+	cleanupncurses();
 	return 0;
 }
 
