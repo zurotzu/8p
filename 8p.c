@@ -1274,6 +1274,10 @@ searchstr_push(wint_t c)
 void
 vlc_event_trackend(const struct libvlc_event_t *event, void *data)
 {
+	/* Unused variables */
+	(void)event;
+	(void)data;
+
 	track_ended = TRUE;
 }
 
@@ -1283,6 +1287,10 @@ vlc_event_error(const struct libvlc_event_t *event, void *data)
 	/* TODO:
 	 * - Handle error
 	 */
+
+	/* Unused variables */
+	(void)event;
+	(void)data;
 }
 
 int
