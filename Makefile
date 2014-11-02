@@ -1,6 +1,6 @@
 VERSION = 1.1
 PREFIX = /usr/local
-CFLAGS+=-pedantic -Wall -Werror
+CFLAGS+=-pedantic -Wall -Werror -Wextra
 LIBS=-lcurl -ljansson -lncursesw -lvlc -lbsd
 LDFLAGS+=-s ${LIBS}
 
