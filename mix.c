@@ -85,6 +85,9 @@ mix_free(struct mix *m)
 {
 	int i;
 
+	if (m == NULL)
+		return;
+
 	free(m->name);
 	free(m->description);
 	free(m->tags);

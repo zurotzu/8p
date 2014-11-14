@@ -78,6 +78,9 @@ error:
 void
 track_free(struct track *t)
 {
+	if (t == NULL)
+		return;
+
 	free(t->name);
 	free(t->performer);
 	free(t->url);
