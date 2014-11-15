@@ -82,7 +82,7 @@ static void
 drawheader(struct info *data)
 {
 	char *mix, *track;
-	int index;
+	int index, i;
 	size_t len;
 
 	if (data == NULL)
@@ -113,31 +113,33 @@ drawheader(struct info *data)
 	}
 
 	/* First line */
-	(void)mvaddch(0, 0, ACS_ULCORNER);
-	(void)mvhline(0, 1, ACS_HLINE, COLS-2);
+	(void)mvprintw(0, 0, "%lc", L'\u250C');
+	for (i = 1; i < COLS-1; i++)
+		(void)printw("%lc", L'\u2500');
 	(void)mvaddstr(0, 3, " 8p ");
-	(void)mvaddch(0, COLS-1, ACS_URCORNER);
+	(void)mvprintw(0, COLS-1, "%lc", L'\u2510');
 
 	/* Second line */
-	(void)mvaddch(1, 0, ACS_VLINE);
-	(void)mvaddch(1, COLS-1, ACS_VLINE);
+	(void)mvprintw(1, 0, "%lc", L'\u2502');
+	(void)mvprintw(1, COLS-1, "%lc", L'\u2502');
 	if (mix)
 		(void)mvprintw(1, 2, "Mix:   %.*s", COLS-4-7, mix);
 	else
 		(void)mvprintw(1, 2, "Mix:");
 
 	/* Third line */
-	(void)mvaddch(2, 0, ACS_VLINE);
-	(void)mvaddch(2, COLS-1, ACS_VLINE);
+	(void)mvprintw(2, 0, "%lc", L'\u2502');
+	(void)mvprintw(2, COLS-1, "%lc", L'\u2502');
 	if (track)
 		(void)mvprintw(2, 2, "Track: %.*s", COLS-4-7, track);
 	else
 		(void)mvprintw(2, 2, "Track:");
 
 	/* Fourth line */
-	(void)mvaddch(3, 0, ACS_LLCORNER);
-	(void)mvhline(3, 1, ACS_HLINE, COLS-2);
-	(void)mvaddch(3, COLS-1, ACS_LRCORNER);
+	(void)mvprintw(3, 0, "%lc", L'\u2514');
+	for (i = 1; i < COLS-1; i++)
+		(void)printw("%lc", L'\u2500');
+	(void)mvprintw(3, COLS-1, "%lc", L'\u2518');
 
 	if (track)
 		free(track);
@@ -153,8 +155,8 @@ drawbody(struct info *data)
 	if (LINES <= 6)
 		return;
 
-	(void)mvaddch(3, 0, ACS_LTEE);
-	(void)mvaddch(3, COLS-1, ACS_RTEE);
+	(void)mvprintw(3, 0, "%lc", L'\u251C');
+	(void)mvprintw(3, COLS-1, "%lc", L'\u2524');
 
 	switch (data->state) {
 	case START:	drawstart(data); break;
@@ -170,8 +172,8 @@ static void
 drawbodyfill(int ln)
 {
 	for (; ln < LINES-3; ln++) {
-		(void)mvaddch(ln, 0, ACS_VLINE);
-		(void)mvaddch(ln, COLS-1, ACS_VLINE);
+		(void)mvprintw(ln, 0, "%lc", L'\u2502');
+		(void)mvprintw(ln, COLS-1, "%lc", L'\u2502');
 	}
 }
 
@@ -309,16 +311,18 @@ drawfooter(struct info *data)
 	if (LINES < 6)
 		return;
 
-	(void)mvaddch(LINES-3, 0, ACS_LTEE);
-	(void)mvhline(LINES-3, 1, ACS_HLINE, COLS-2);
-	(void)mvaddch(LINES-3, COLS-1, ACS_RTEE);
+	(void)mvprintw(LINES-3, 0, "%lc", L'\u251C');
+	for (i = 1; i < COLS-1; i++)
+		(void)printw("%lc", L'\u2500');
+	(void)printw("%lc", L'\u2524');
 	
-	(void)mvaddch(LINES-2, 0, ACS_VLINE);
-	(void)mvaddch(LINES-2, COLS-1, ACS_VLINE);
+	(void)mvprintw(LINES-2, 0, "%lc", L'\u2502');
+	(void)mvprintw(LINES-2, COLS-1, "%lc", L'\u2502');
 
-	(void)mvaddch(LINES-1, 0, ACS_LLCORNER);
-	(void)mvhline(LINES-1, 1, ACS_HLINE, COLS-2);
-	(void)mvaddch(LINES-1, COLS-1, ACS_LRCORNER);
+	(void)mvprintw(LINES-1, 0, "%lc", L'\u2514');
+	for (i = 1; i < COLS-1; i++)
+		(void)printw("%lc", L'\u2500');
+	(void)mvprintw(LINES-1, COLS-1, "%lc", L'\u2518');
 
 	switch (data->state) {
 	case PLAY:
@@ -416,7 +420,7 @@ nlprintw(int ln, int sel, int *scroll, const char *fmt, ...)
 		}
 	}
 	while (ln < LINES - 3 && wstr[i] != L'\0') {
-		(void)mvaddch(ln, 0, ACS_VLINE);
+		(void)mvprintw(ln, 0, "%lc", L'\u2502');
 		(void)move(ln, 2);
 		if (sel == TRUE)
 			(void)attron(A_REVERSE);
@@ -430,7 +434,7 @@ nlprintw(int ln, int sel, int *scroll, const char *fmt, ...)
 			(void)addch(wstr[i]);
 			i++;
 		}
-		(void)mvaddch(ln, COLS-1, ACS_VLINE);
+		(void)mvprintw(ln, COLS-1, "%lc", L'\u2502');
 		ln++;
 	}
 
