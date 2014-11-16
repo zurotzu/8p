@@ -196,9 +196,9 @@ drawsearch(struct info *data)
 	char *txt[] = {
 	    "Search Help",
 	    "-----------",
-	    "",
+	    "\n",
 	    "Search by using Smart ID, for example:",
-	    "",
+	    "\n",
 	    "Smart ID                    Result",
 	    "all:popular                 all mixes",
 	    "tags:chill                  mixes tagged \"chill\"",
@@ -209,7 +209,7 @@ drawsearch(struct info *data)
 	    "dj:1                        mixes published by the user with id=1",
 	    "liked:1                     mixes liked by the user with id=1",
 	    "similar:14                  mixes similar to mix with id=14",
-	    "",
+	    "\n",
 	    "Note: no spaces allowed."};
         int i;
 	int y;
