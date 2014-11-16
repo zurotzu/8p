@@ -2,7 +2,7 @@ VERSION=	1.2
 
 PREFIX?=	/usr/local
 
-CFLAGS+=	-O2 -pedantic -Wall -Werror -Wextra \
+CFLAGS+=	-std=c99 -O2 -pedantic -Wall -Werror -Wextra \
 		-D_XOPEN_SOURCE_EXTENDED=1 -D_XOPEN_SOURCE=700
 LIBS=		-lcurl -ljansson -lncursesw -lvlc -lbsd
 LDFLAGS+=	-s ${LIBS}
