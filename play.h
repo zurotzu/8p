@@ -17,7 +17,7 @@ int	play_isoverthirtymark(struct info *);
 void	play_togglepause(struct info *);
 void	play_next(struct info *);
 void	play_nextmix(struct info *);
-int	play_skip(struct info *);
+void	play_skip(struct info *);
 
 
 #endif

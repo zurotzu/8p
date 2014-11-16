@@ -14,6 +14,23 @@ static void	drawbodyfill(int);
 static int	nlprintw(int, int, int *, const char*, ...);
 
 void
+draw_error(char *msg)
+{
+	int i;
+
+	if (LINES < 6)
+		return;
+
+	/* Clear footer line */
+	for (i = 1; i < COLS-1; i++)
+		(void)mvprintw(LINES-2, i, " ");
+
+	(void)mvprintw(LINES-2, 2, "ERROR: %.*s", COLS-11, msg);
+	(void)refresh();
+	(void)sleep(3);	/* Display error for 3 seconds */
+}
+
+void
 draw_exit(void)
 {
 	(void)endwin();

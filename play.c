@@ -36,6 +36,7 @@ error:
 void
 play_next(struct info *data)
 {
+	char errormsg[] = "Next mix not found.";
 	int errn;
 	struct track *t;
 	libvlc_media_t *media;
@@ -46,8 +47,11 @@ play_next(struct info *data)
 	if (data->m->track_count > 0) {
 		if (data->m->track[data->m->track_count-1]->last == TRUE) {
 			errn = search_nextmix(data);
-			if (errn == ERROR)
+			if (errn == ERROR) {
+				draw_error(errormsg);
+				data->state = START;
 				return;
+			}
 		}
 	}
 
@@ -66,28 +70,32 @@ play_next(struct info *data)
 void
 play_nextmix(struct info *data)
 {
+	char errormsg[] = "Next mix not found.";
 	int errn;
 
 	errn = search_nextmix(data);
-	if (errn == ERROR)
+	if (errn == ERROR) {
+		draw_error(errormsg);
+		data->state = START;
 		return;
+	}
 	data->scroll = 0;
 	play_next(data);
 }
 
-int
+void
 play_skip(struct info *data)
 {
+	char errormsg[] = "Skip not allowed.";
 	struct track *t;
 
 	t = data->m->track[data->m->track_count-1];
 	if (t == NULL)
-		return ERROR;
+		return;
 	if (t->skip_allowed == TRUE && t->last == FALSE) {
 		play_next(data);
-		return SUCCESS;
 	} else
-		return ERROR;
+		draw_error(errormsg);
 }
 
 int

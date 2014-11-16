@@ -10,12 +10,14 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <wchar.h>
 #include "defs.h"
 #include "mix.h"
 #include "string.h"
 #include "util.h"
 
+void	draw_error(char *);
 void	draw_exit(void);
 void	draw_init(void);
 void	draw_redraw(struct info *);
