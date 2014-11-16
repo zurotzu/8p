@@ -78,6 +78,7 @@ search_addchar(struct info *data, wint_t c)
 void
 search_search(struct info *data)
 {
+	char errormsg[] = "Search returned no results.";
 	char *js, *tmp, *url;
 	int tmp_len;
 	size_t len;
@@ -179,6 +180,7 @@ error:
 	if (root)
 		json_decref(root);
 
+	draw_error(errormsg);
 	data->state = data->pstate;
 
 	return;
