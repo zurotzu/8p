@@ -25,5 +25,5 @@ will install the 8p binary into /usr/bin/8p.
 
 ### Debian/Ubuntu
 
-In 8p.c, change `#include <ncurses.h>` into `#include <ncursesw/curses.h>`.
+In draw.h, key.h, search.h, and select.h, change `#include <ncurses.h>` into `#include <ncursesw/curses.h>`.
 
