@@ -20,7 +20,7 @@ report(struct info *data)
 	/* Set up url */
 	len = strlen("http://8tracks.com/sets/") + strlen(data->playtoken) +
 	    strlen("/report?track_id=") + intlen(t->id) +
-	    strlen("&mix_id=") + intlen(data->m->id);
+	    strlen("&mix_id=") + intlen(data->m->id) + 1;
 	url = malloc(len * sizeof(char));
 	if (url == NULL)
 		err(1, NULL);
