@@ -25,5 +25,13 @@ will install the 8p binary into /usr/bin/8p.
 
 ### Debian/Ubuntu
 
-In draw.h, key.h, search.h, and select.h, change `#include <ncurses.h>` into `#include <ncursesw/curses.h>`.
 
+`sudo make clean debian install`
+
+It will in draw.h, key.h, search.h, and select.h, change `#include <ncurses.h>` into `#include <ncursesw/curses.h>`.
+
+This change can be reverted with `make arch`.
+
+For convencience, here is a one-liner with the debian-dependencies:
+
+`sudo apt-get install libbsd-dev libncursesw5-dev libvlc-dev libjansson-dev libcurl4-openssl-dev`

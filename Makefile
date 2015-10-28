@@ -22,6 +22,19 @@ all: 8p
 clean:
 	rm -f 8p ${OBJS}
 
+debian:
+	@echo replacing includes for ncurses.h to ncursesw/curses.h
+	for file in draw.h key.h search.h select.h ; do \
+		sed -i "s/ncurses.h/ncursesw\/curses.h/" $$file ; \
+	done
+
+arch:
+	@echo replacing includes for ncursesw/curses.h to ncurses.h
+	for file in draw.h key.h search.h select.h ; do \
+		sed -i "s/ncursesw\/curses.h/ncurses.h/" $$file; \
+	done
+
+
 dist:
 	@echo creating tarball
 	mkdir -p 8p-${VERSION}
